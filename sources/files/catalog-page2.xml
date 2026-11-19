@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><catalog xmlns="urn:service:catalog:v1" supplier="V1"><group id="parts"><document id="MOTOR" revision="2" href="/files/motor-c2.txt"/><document id="SAFE" revision="1" href="/files/firmware-safety.txt"/><document id="SENSOR" revision="4" href="/files/sensor-note.txt"/></group></catalog>

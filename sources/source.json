@@ -1,0 +1,270 @@
+{
+  "name": "设备维保资料的适配收集与离线交接",
+  "browser_collections": [],
+  "operations": [
+    "handoff"
+  ],
+  "required_fields": {
+    "handoff": [
+      "device",
+      "observed_at",
+      "documents",
+      "manifest",
+      "recipient"
+    ]
+  },
+  "initial_state": {
+    "revision": 1,
+    "collections": {
+      "inventory": [
+        {
+          "id": "RB1",
+          "model": "R",
+          "hardware": "B",
+          "firmware": "2.4.0",
+          "components": {
+            "motor": "C2-B",
+            "sensor": "S8"
+          },
+          "observed_at": "2026-11-18T18:00:00+08:00"
+        },
+        {
+          "id": "RB2",
+          "model": "R",
+          "hardware": "B",
+          "firmware": "2.4.0",
+          "components": {
+            "motor": "C2-B",
+            "sensor": "S9"
+          },
+          "observed_at": "2026-11-18T18:01:00+08:00"
+        },
+        {
+          "id": "RB3",
+          "model": "R",
+          "hardware": "A",
+          "firmware": null,
+          "components": {
+            "motor": "C1"
+          },
+          "observed_at": "2026-11-18T18:02:00+08:00"
+        }
+      ],
+      "maintenance_requests": [
+        {
+          "id": "M1",
+          "device": "RB1",
+          "matter": "motor-service"
+        },
+        {
+          "id": "M2",
+          "device": "RB2",
+          "matter": "sensor-service"
+        },
+        {
+          "id": "M3",
+          "device": "RB3",
+          "matter": "motor-service"
+        }
+      ],
+      "catalog_roots": [
+        {
+          "id": "V1",
+          "xml": "/files/catalog-root.xml",
+          "namespace": "urn:service:catalog:v1"
+        }
+      ],
+      "document_metadata": [
+        {
+          "id": "V1-MAIN-3",
+          "supplier": "V1",
+          "document": "MAIN",
+          "revision": "3",
+          "state": "active",
+          "matters": [
+            "motor-service",
+            "sensor-service"
+          ],
+          "applicability": {
+            "model": "R",
+            "hardware": [
+              "A",
+              "B"
+            ]
+          },
+          "requires": [
+            "V1-SAFE-1"
+          ],
+          "file": {
+            "path": "/files/manual-body.txt",
+            "sha256": "018f336a906396453fe5b5b750dd0fa14367ae8275159b489eb7083e8f40f1ad",
+            "bytes": 110
+          }
+        },
+        {
+          "id": "V1-MOTOR-2",
+          "supplier": "V1",
+          "document": "MOTOR",
+          "revision": "2",
+          "state": "active",
+          "matters": [
+            "motor-service"
+          ],
+          "applicability": {
+            "component": {
+              "motor": [
+                "C2-B"
+              ]
+            }
+          },
+          "requires": [
+            "V1-MAIN-3"
+          ],
+          "file": {
+            "path": "/files/motor-c2.txt",
+            "sha256": "6ba4093bb47485faa1bebf93409ef709dc6e2baef02c0479eb52ba33208eef81",
+            "bytes": 79
+          }
+        },
+        {
+          "id": "V1-SAFE-1",
+          "supplier": "V1",
+          "document": "SAFE",
+          "revision": "1",
+          "state": "active",
+          "matters": [
+            "motor-service",
+            "sensor-service"
+          ],
+          "applicability": {
+            "firmware_min": "2.0.0",
+            "firmware_max": "2.9.9"
+          },
+          "requires": [],
+          "file": {
+            "path": "/files/firmware-safety.txt",
+            "sha256": "d7960c5eac9900dd431eee89ecef967181adcd1feb72b267f061c0a96107f0cd",
+            "bytes": 86
+          }
+        },
+        {
+          "id": "V1-SENSOR-4",
+          "supplier": "V1",
+          "document": "SENSOR",
+          "revision": "4",
+          "state": "active",
+          "matters": [
+            "sensor-service"
+          ],
+          "applicability": {
+            "component": {
+              "sensor": [
+                "S9"
+              ]
+            }
+          },
+          "requires": [
+            "V1-MAIN-3"
+          ],
+          "file": {
+            "path": "/files/sensor-note.txt",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+            "bytes": 56
+          }
+        },
+        {
+          "id": "V1-MAIN-2",
+          "supplier": "V1",
+          "document": "MAIN",
+          "revision": "2",
+          "state": "withdrawn",
+          "withdrawn_by": "V1-MAIN-3",
+          "matters": [
+            "motor-service"
+          ],
+          "requires": [],
+          "file": {
+            "path": "/files/manual-body.txt",
+            "sha256": "018f336a906396453fe5b5b750dd0fa14367ae8275159b489eb7083e8f40f1ad",
+            "bytes": 110
+          }
+        }
+      ],
+      "desk_receipts": [
+        {
+          "id": "H0",
+          "device": "RB1",
+          "state": "claimed",
+          "inventory_observed_at": "2026-11-17T17:00:00+08:00",
+          "documents": [
+            "V1-MAIN-2"
+          ],
+          "recipient": "NIGHT-A"
+        }
+      ]
+    },
+    "action_outcomes": {
+      "handoff:RB1": {
+        "status": "received",
+        "accepted": [
+          "RB1"
+        ],
+        "returned": [],
+        "equals": {
+          "device": "RB1",
+          "recipient": "NIGHT-A",
+          "observed_at": "2026-11-18T18:00:00+08:00"
+        },
+        "allowed_items": {}
+      },
+      "handoff:RB2": {
+        "status": "received",
+        "accepted": [
+          "RB2"
+        ],
+        "returned": [],
+        "equals": {
+          "device": "RB2",
+          "recipient": "NIGHT-A"
+        },
+        "allowed_items": {}
+      }
+    }
+  },
+  "changes": [
+    {
+      "id": "replace_motor",
+      "label": "一号设备更换为未登记电机",
+      "patches": [
+        {
+          "collection": "inventory",
+          "id": "RB1",
+          "set": {
+            "components": {
+              "motor": "C3",
+              "sensor": "S8"
+            },
+            "observed_at": "2026-11-18T20:00:00+08:00"
+          }
+        }
+      ]
+    },
+    {
+      "id": "repair_file",
+      "label": "供应商修复传输文件",
+      "patches": [
+        {
+          "collection": "document_metadata",
+          "id": "V1-SENSOR-4",
+          "set": {
+            "file": {
+              "path": "/files/sensor-note.txt",
+              "sha256": "5aaed868affbd849887212f4b5700bba09830f7f9a6a0a8405c662c5e0745b14",
+              "bytes": 56
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
