@@ -2,15 +2,37 @@
   "name": "设备维保资料的适配收集与离线交接",
   "browser_collections": [],
   "operations": [
-    "handoff"
+    "register_blob",
+    "stage_bundle",
+    "receive_bundle",
+    "withdraw_bundle",
+    "announce_update"
   ],
   "required_fields": {
-    "handoff": [
+    "register_blob": [
+      "provider_version",
+      "sha256",
+      "hex"
+    ],
+    "stage_bundle": [
+      "provider_version",
       "device",
       "observed_at",
       "documents",
       "manifest",
-      "recipient"
+      "seat"
+    ],
+    "receive_bundle": [
+      "provider_version",
+      "seat",
+      "seat_generation"
+    ],
+    "withdraw_bundle": [
+      "provider_version"
+    ],
+    "announce_update": [
+      "provider_version",
+      "observed_at"
     ]
   },
   "initial_state": {
@@ -201,34 +223,35 @@
           ],
           "recipient": "NIGHT-A"
         }
-      ]
+      ],
+      "provider_records": []
     },
-    "action_outcomes": {
-      "handoff:RB1": {
-        "status": "received",
-        "accepted": [
-          "RB1"
-        ],
-        "returned": [],
-        "equals": {
+    "action_outcomes": {},
+    "provider": {
+      "kind": "docdesk",
+      "version": 1,
+      "serial": 0,
+      "accounts": {},
+      "records": [
+        {
+          "id": "NIGHT-A",
+          "kind": "seat",
+          "generation": 1,
+          "current_bundle": "BUNDLE-OLD"
+        },
+        {
+          "id": "BUNDLE-OLD",
+          "kind": "bundle",
           "device": "RB1",
-          "recipient": "NIGHT-A",
-          "observed_at": "2026-11-18T18:00:00+08:00"
-        },
-        "allowed_items": {}
-      },
-      "handoff:RB2": {
-        "status": "received",
-        "accepted": [
-          "RB2"
-        ],
-        "returned": [],
-        "equals": {
-          "device": "RB2",
-          "recipient": "NIGHT-A"
-        },
-        "allowed_items": {}
-      }
+          "documents": [
+            "V1-MAIN-2"
+          ],
+          "observed_at": "2026-11-17T17:00:00+08:00",
+          "manifest": [],
+          "state": "received",
+          "seat": "NIGHT-A"
+        }
+      ]
     }
   },
   "changes": [
@@ -247,7 +270,8 @@
             "observed_at": "2026-11-18T20:00:00+08:00"
           }
         }
-      ]
+      ],
+      "provider_patches": []
     },
     {
       "id": "repair_file",

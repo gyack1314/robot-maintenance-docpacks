@@ -4,17 +4,21 @@ import argparse, copy, hashlib, json, mimetypes, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse, parse_qs
+import provider
 ROOT=Path(__file__).resolve().parent
 CONFIG=json.loads((ROOT/'sources'/'source.json').read_text(encoding='utf-8'))
 LOCK=threading.RLock()
 STATE=copy.deepcopy(CONFIG['initial_state'])
 RECEIPTS=[]
 JOBS=[]
+TEST_BASE=''
 def encoded(value): return json.dumps(value,ensure_ascii=False).encode('utf-8')
 def reset():
     global STATE
     with LOCK:
         STATE=copy.deepcopy(CONFIG['initial_state']);RECEIPTS.clear();JOBS.clear()
+def get_rows(name):
+    return RECEIPTS if name=='receipts' else (provider.read(STATE) if name=='provider_records' else STATE['collections'].get(name,[]))
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args): pass
     def send(self,body,status=200,kind='application/json; charset=utf-8',headers=None):
@@ -28,8 +32,8 @@ class Handler(BaseHTTPRequestHandler):
         if u.path=='/health': return self.send(encoded({'ready':True,'source':CONFIG['name']}))
         if u.path=='/': return self.send((ROOT/'sources'/'portal.html').read_bytes(),kind='text/html; charset=utf-8')
         if u.path=='/source-meta':
-            return self.send(encoded({'name':CONFIG['name'],'revision':STATE['revision'],
-                'collections':[{'name':name,'total':len(rows)} for name,rows in STATE['collections'].items()]+[{'name':'receipts','total':len(RECEIPTS)}],
+            return self.send(encoded({'name':CONFIG['name'],'revision':STATE['revision'],'provider':{'kind':STATE['provider']['kind'],'version':STATE['provider']['version']},
+                'collections':[{'name':name,'total':len(get_rows(name))} for name,rows in STATE['collections'].items()]+[{'name':'receipts','total':len(RECEIPTS)}],
                 'operations':CONFIG['operations'],'changes':[{'id':x['id'],'label':x['label']} for x in CONFIG.get('changes',[])]}))
         if u.path=='/export-status':
             job=next((x for x in JOBS if x['id']==q.get('id',[''])[0]),None)
@@ -42,12 +46,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(encoded({'error':'not_found'}),404)
         if u.path=='/source-detail':
             name=q.get('name',[''])[0]; rid=q.get('id',[''])[0]
-            row=next((x for x in (RECEIPTS if name=='receipts' else STATE['collections'].get(name,[])) if x['id']==rid),None)
+            row=next((x for x in get_rows(name) if x['id']==rid),None)
             return self.send(encoded({'revision':STATE['revision'],'item':row}),200 if row else 404)
         if u.path=='/source-list':
             name=q.get('name',[''])[0]
             with LOCK:
-                rows=copy.deepcopy(RECEIPTS if name=='receipts' else STATE['collections'].get(name,[])); revision=STATE['revision']
+                rows=copy.deepcopy(get_rows(name)); revision=STATE['revision']
             start=int(q.get('offset',['0'])[0]);size=2
             page=rows[start:start+size]
             if name in CONFIG.get('browser_collections',[]):page=[{k:v for k,v in x.items() if k in ('id','name','label')} for x in page]
@@ -98,6 +102,11 @@ class Handler(BaseHTTPRequestHandler):
                     target=next((x for x in rows if x['id']==patch['id']),None)
                     if target is not None:target.update(patch['set'])
                     elif 'append' in patch:rows.append(patch['append'])
+                p=STATE['provider']
+                for changed in selected.get('provider_patches',[]):
+                    next(x for x in p['records'] if x['id']==changed['id']).update(copy.deepcopy(changed['set']))
+                p['accounts'].update(copy.deepcopy(selected.get('provider_accounts',{})))
+                if selected.get('provider_patches') or selected.get('provider_accounts'):p['version']+=1
                 STATE.setdefault('action_outcomes',{}).update(copy.deepcopy(selected.get('action_outcomes',{})))
                 if 'export_manifest' in selected:CONFIG['export_manifest']=copy.deepcopy(selected['export_manifest'])
                 STATE['revision']+=1
@@ -111,26 +120,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send(encoded(existing))
             if not value.get('request_key') or not value.get('object_id') or value.get('operation') not in CONFIG['operations']:
                 return self.send(encoded({'error':'invalid_action'}),400)
-            if value.get('expected_revision')!=STATE['revision']:
-                return self.send(encoded({'error':'revision_conflict','current_revision':STATE['revision']}),409)
+            candidate=copy.deepcopy(STATE)
+            try:result=provider.invoke(CONFIG,candidate,value)
+            except provider.Rejected as exc:return self.send(encoded({'error':exc.reason}),exc.status)
+            except (ValueError,TypeError,KeyError,StopIteration):return self.send(encoded({'error':'invalid_provider_payload'}),422)
+            STATE.clear();STATE.update(candidate)
             rid='R'+str(len(RECEIPTS)+1).zfill(4)
-            outcome=STATE.get('action_outcomes',{}).get(value['operation']+':'+value['object_id'])
-            if outcome is None:
-                return self.send(encoded({'error':'unknown_provider_object'}),422)
-            payload=value.get('payload',{})
-            if not isinstance(payload,dict):return self.send(encoded({'error':'invalid_payload'}),422)
-            errors=[]
-            for field in CONFIG.get('required_fields',{}).get(value['operation'],[]):
-                if field not in payload or payload[field] in (None,''):errors.append(field+':required')
-            for field,expected in outcome.get('equals',{}).items():
-                if payload.get(field)!=expected:errors.append(field+':mismatch')
-            for field,allowed in outcome.get('allowed_items',{}).items():
-                if not isinstance(payload.get(field),list) or any(x not in allowed for x in payload[field]):errors.append(field+':outside_scope')
-            if errors:return self.send(encoded({'error':'provider_validation','fields':errors}),422)
             receipt={'id':rid,'receipt_id':rid,'request_key':value['request_key'],'object_id':value['object_id'],
-                'operation':value['operation'],'basis_revision':STATE['revision'],'accepted':outcome.get('accepted',[]),
-                'returned':outcome.get('returned',[]),'status':outcome['status'],
-                'input':value.get('payload',{})}
+                'operation':value['operation'],'input':copy.deepcopy(value.get('payload',{})),**result}
             RECEIPTS.append(receipt);STATE['revision']+=1
             if value.get('drop_response'):
                 self.close_connection=True
