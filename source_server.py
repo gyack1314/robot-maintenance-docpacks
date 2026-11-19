@@ -121,7 +121,7 @@ class Handler(BaseHTTPRequestHandler):
             if not isinstance(payload,dict):return self.send(encoded({'error':'invalid_payload'}),422)
             errors=[]
             for field in CONFIG.get('required_fields',{}).get(value['operation'],[]):
-                if field not in payload or payload[field] in (None,'',[]):errors.append(field+':required')
+                if field not in payload or payload[field] in (None,''):errors.append(field+':required')
             for field,expected in outcome.get('equals',{}).items():
                 if payload.get(field)!=expected:errors.append(field+':mismatch')
             for field,allowed in outcome.get('allowed_items',{}).items():
